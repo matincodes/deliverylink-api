@@ -1,25 +1,13 @@
 import express, { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs'; // For password hashing
-import session from 'express-session';
-import cookieParser from 'cookie-parser';
+
 
 
 const prisma = new PrismaClient();
 
 const app = express();
 
-// creating 24 hours from milliseconds
-const oneDay = 1000 * 60 * 60 * 24;
-
-app.use(session({
-    secret: 'secret-key',
-    resave: false,
-    cookie: {maxAge: oneDay},
-    saveUninitialized: true,
-}));
-
-app.use(cookieParser());
 
 
 const router = Router();
@@ -33,7 +21,8 @@ declare module 'express-session' {
 
 
 router.post('/signup', async (req: Request, res: Response) => {
-    const { userName, password } = req.body;
+    const {userName, password } = req.body;
+       
 
     try {
         if (!req.body.userName) {
@@ -73,11 +62,14 @@ router.post('/signup', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
     const { userName, password } = req.body;
 
+
     try {
         const user = await prisma.user.findUnique({
             where: { userName },
         });
 
+        req.session.userId = user?.id
+        console.log("login", req.session)
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
@@ -97,7 +89,8 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 export function verifySession(req: Request, res: Response, next: NextFunction) {
-    if (!req.session || !req.session.userId) {
+    console.log(req.session.userId)
+    if (!req.session.userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 

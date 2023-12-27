@@ -1,13 +1,17 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { verifySession } from './auth'; // Verify user session
+
 
 const router = Router();
 const prisma = new PrismaClient();
 
-router.get('/', verifySession, async (req: Request, res: Response) => {
-    const userId = req.session.userId;
 
+
+router.get('/', verifySession, async (req: Request, res: Response) => {
+
+    const userId = req.session.userId;
+    console.log("items", req.session)
     try {
         const items = await prisma.item.findMany({
             where: { userId },
@@ -21,7 +25,7 @@ router.get('/', verifySession, async (req: Request, res: Response) => {
 });
 
 router.post('/', verifySession, async (req: Request, res: Response) => {
-    const { title } = req.body;
+    const { title, userId } = req.body;
 
     try {
         if (!req.session.userId) {
@@ -29,7 +33,7 @@ router.post('/', verifySession, async (req: Request, res: Response) => {
           }
           
         const newItem = await prisma.item.create({
-            data: { title, userId:   req.session.userId },
+            data: { title, userId },
         });
 
         res.json({ success: true, item: newItem });

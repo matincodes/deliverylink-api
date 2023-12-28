@@ -20,15 +20,11 @@ declare module 'express-session' {
   }
 
 
+
 router.post('/signup', async (req: Request, res: Response) => {
     const {userName, password } = req.body;
        
-
     try {
-        if (!req.body.userName) {
-            // Handle the case of missing username, e.g., return an error
-            return res.status(400).json({ error: 'Username is required' });
-          }
 
         const existingUser = await prisma.user.findUnique({
             where: { userName: req.body.userName },
@@ -38,19 +34,14 @@ router.post('/signup', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'Username already exists' });
         }  else{
 
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await prisma.user.create({
-                data: { userName, password: hashedPassword },
-            });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await prisma.user.create({
+            data: { userName, password: hashedPassword },
+        });
     
-                if (req.session) {
-                req.session.userId = newUser.id;
-            } else {
-                // Handle the case where session is not available
-                console.error('Session is not initialized');
-            }
-    
-            res.json({ success: true, message: 'Signup successful', user: newUser });
+        res.json({ success: true, message: 'Signup successful', user: newUser });
+        console.log("sign successful")
+
         }                                                                             
 
     } catch (error) {
@@ -59,7 +50,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response, next:NextFunction) => {
     const { userName, password } = req.body;
 
 
@@ -67,18 +58,17 @@ router.post('/login', async (req: Request, res: Response) => {
         const user = await prisma.user.findUnique({
             where: { userName },
         });
-
-        req.session.userId = user?.id
-        console.log("login", req.session)
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
-        }
-
-        const passwordMatch = await bcrypt.compare(password, user.password);
-
-        if (passwordMatch) {
-            req.session.userId = user.id; // Store user ID in session
-            res.json({ success: true, message: 'Login successful', user });
+        
+        if (user){
+            const passwordMatch = await bcrypt.compare(password, user?.password);
+            if (user && passwordMatch) {
+                req.session.userId = user?.id; // Store user ID in session
+    
+                console.log(req.session.userId)
+                res.json({ success: true, message: 'Login successful', user });
+                res.locals.session = req.session;
+                next();
+            }
         } else {
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
@@ -89,9 +79,10 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 export function verifySession(req: Request, res: Response, next: NextFunction) {
-    console.log(req.session.userId)
+
+    console.log("verify", req.session.userId, req.session, req.url, req.method)
     if (!req.session.userId) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'Unauthorized session' });
     }
 
     next();

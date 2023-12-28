@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import session from 'express-session';
 import cors from "cors";
 import * as dotenv from 'dotenv';
-import authRoutes from './routes/auth';
+import authRoutes, {verifySession} from './routes/auth';
 import itemsRoutes from './routes/items';
 import cookieParser from 'cookie-parser';
 
@@ -15,25 +15,23 @@ const port = process.env.PORT  || 3000;
 
 app.use(cookieParser());
 
-// creating 24 hours from milliseconds
-const oneDay = 1000 * 60 * 60 * 24;
+
 
 // Set up session and cookie middleware
 app.use(session({
   secret: 'secret-key',
   resave: false,
-  cookie: {maxAge: oneDay},
-  saveUninitialized: true,
+  cookie: {maxAge: 90000},
+  saveUninitialized: false,
 }));
 
 const corsOptions: cors.CorsOptions = {
-  origin: 'http://localhost:5173', 
+  origin: 'http://localhost:5174', 
   credentials: true,
 };
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
-
 
 
 
@@ -43,6 +41,7 @@ app.use((err: Error, req: Request, res: Response, next: () => void) => {
 });
 
 app.use('/auth', authRoutes);
+
 app.use('/items', itemsRoutes);
 
 app.listen(port, () => {

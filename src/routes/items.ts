@@ -1,6 +1,7 @@
 import express, { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifySession } from './auth'; // Verify user session
+
+
 
 
 const router = Router();
@@ -8,10 +9,10 @@ const prisma = new PrismaClient();
 
 
 
-router.get('/', verifySession, async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
 
-    const userId = req.session.userId;
-    console.log("items", req.session)
+    const userId = req.body.userId;
+
     try {
         const items = await prisma.item.findMany({
             where: { userId },
@@ -24,16 +25,19 @@ router.get('/', verifySession, async (req: Request, res: Response) => {
     }
 });
 
-router.post('/', verifySession, async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
+
     const { title, userId } = req.body;
 
     try {
-        if (!req.session.userId) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-          }
           
         const newItem = await prisma.item.create({
-            data: { title, userId },
+            data: { 
+                title, 
+                user: {
+                    connect: { id: userId }, 
+                  }
+            },
         });
 
         res.json({ success: true, item: newItem });
@@ -43,10 +47,9 @@ router.post('/', verifySession, async (req: Request, res: Response) => {
     }
 });
 
-router.put('/:id', verifySession, async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { title } = req.body;
-    const userId = req.session.userId;
+    const { title, userId } = req.body;
 
     try {
         const item = await prisma.item.update({
@@ -65,9 +68,9 @@ router.put('/:id', verifySession, async (req: Request, res: Response) => {
     }
 });
 
-router.delete('/:id', verifySession, async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
-    const userId = req.session.userId;
+    const userId = req.body.userId;
 
     try {
         const deletedItem = await prisma.item.delete({
